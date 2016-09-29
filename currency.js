@@ -27,7 +27,7 @@ exports.run = function(api, event) {
           return;
         }
 
-        api.sendMessage("It's about " + result.result + ' ' + parts[3]);
+        api.sendMessage("It's about " + result.result + ' ' + parts[3], event.thread_id);
     });
 };
 
