@@ -1,4 +1,4 @@
-var request = require.safe('request');
+var request = require('request');
 
 exports.run = function(api, event) {
     var query = event.body.substr(10),
