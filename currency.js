@@ -11,24 +11,40 @@ let conversions = null;
 
 exports.match = (event, commandPrefix) => {
     let match = re.exec(event.body);
+    re.lastIndex = 0;
+
     return match !== null;
 };
 
 exports.run = (api, event) => {
-    let query = event.body.substr(10),
-        parts = query.split(' ');
+    // If no default currency has been specified, use NZD, 'cause it's cool.
+    if (!exports.config.defaultToCurrency) {
+        exports.config.defaultToCurrency = "NZD";
+    }
 
-    //If we don't have the right number of parts, give up
-    if (parts.length !== 4) {
+    let match = re.exec(event.body),
+        amount = match[1],
+        fromCurrency = match[4],
+        toCurrency = match[6] || exports.config.defaultToCurrency;
+    
+    re.lastIndex = 0;
+
+    // If we don't have a to currency in the config or message, yell at the user
+    // (it's always their fault).
+    if (!toCurrency) {
+        api.sendMessage("You don't seem to have a default to currency specified (either set one in the config.defaultToCurrency or specify it in the message)", event.thread_id);
+        return;
+    }
+
+    // This should never happen but I'm paranoid.
+    if (!amount || !fromCurrency) {
         api.sendMessage("That looks wrong. You should try harder.", event.thread_id);
         return;
     }
 
     getExchange()
         .then(result => {
-            //Add an entry for the Euro
-            result.rates.EUR = 1;
-            result = convert(parts[1], parts[3], parseInt(parts[0]), result.rates);
+            result = convert(fromCurrency, toCurrency, parseFloat(amount), result.rates);
 
             //If we couldn't convert, give up
             if (result.error) {
@@ -36,7 +52,7 @@ exports.run = (api, event) => {
             return;
             }
 
-            api.sendMessage("It's about " + result.result + ' ' + parts[3], event.thread_id);
+            api.sendMessage(`${amount} ${fromCurrency} is about ${result.result} ${toCurrency}`, event.thread_id);
         }, error => {
             //If we couldn't get the latest data, give up.
             api.sendMessage(error, event.thread_id);
@@ -71,8 +87,9 @@ const getExchange = () => {
     return new Promise((accept, reject) => {
         request.get('http://api.fixer.io/latest', function(error, response, body) {
             if (response.statusCode === 200 && response.body) {
-                console.log(response.body);
                 let result = JSON.parse(response.body);
+                // Add an entry for the Euro.
+                result.rates.EUR = 1;
                 accept(result);
             }
             else {
