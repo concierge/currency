@@ -10,28 +10,29 @@ exports.run = (api, event) => {
         return;
     }
 
-    get_exchange(function (result) {
-        //If we couldn't get the latest data, give up.
-        if (result.error) {
-          api.sendMessage(result.error, event.thread_id);
-          return;
-        }
+    getExchange()
+        .then(result => {
+            //Add an entry for the Euro
+            result.rates.EUR = 1;
+            result = convert(parts[1], parts[3], parseInt(parts[0]), result.rates);
 
-        //Add an entry for the Euro
-        result.rates.EUR = 1;
-        result = convert(parts[1], parts[3], parseInt(parts[0]), result.rates);
+            //If we couldn't convert, give up
+            if (result.error) {
+            api.sendMessage(result.error, event.thread_id);
+            return;
+            }
 
-        //If we couldn't convert, give up
-        if (result.error) {
-          api.sendMessage(result.error, event.thread_id);
-          return;
-        }
-
-        api.sendMessage("It's about " + result.result + ' ' + parts[3], event.thread_id);
-    });
+            api.sendMessage("It's about " + result.result + ' ' + parts[3], event.thread_id);
+        }, error => {
+            //If we couldn't get the latest data, give up.
+            api.sendMessage(error, event.thread_id);
+        });
 };
 
 const convert = (f, to, amount, conversions) => {
+    f = f.toUpperCase();
+    to = to.toUpperCase();
+
     if (!conversions[f]) {
         return {
             error: "Unsupported currency '" + f + "'"
@@ -52,14 +53,16 @@ const convert = (f, to, amount, conversions) => {
     };
 };
 
-const get_exchange = (callback) => {
-    request.get('http://api.fixer.io/latest', function(error, response, body) {
-        if (response.statusCode === 200 && response.body) {
-            var result = JSON.parse(response.body);
-            callback(result);
-        }
-        else {
-            callback({error:"Couldn't talk to fixer.io for the exchange rate.."});
-        }
-     });
+const getExchange = () => {
+    return new Promise((accept, reject) => {
+        request.get('http://api.fixer.io/latest', function(error, response, body) {
+            if (response.statusCode === 200 && response.body) {
+                var result = JSON.parse(response.body);
+                accept(result);
+            }
+            else {
+                reject("Couldn't talk to fixer.io for the exchange rate...");
+            }
+        });
+    });
 }
