@@ -1,6 +1,6 @@
 var request = require('request');
 
-exports.run = function(api, event) {
+exports.run = (api, event) => {
     var query = event.body.substr(10),
         parts = query.split(' ');
 
@@ -31,7 +31,7 @@ exports.run = function(api, event) {
     });
 };
 
-function convert(f, to, amount, conversions) {
+const convert = (f, to, amount, conversions) => {
     if (!conversions[f]) {
         return {
             error: "Unsupported currency '" + f + "'"
@@ -50,9 +50,9 @@ function convert(f, to, amount, conversions) {
     return {
         result: a
     };
-}
+};
 
-function get_exchange(callback) {
+const get_exchange = (callback) => {
     request.get('http://api.fixer.io/latest', function(error, response, body) {
         if (response.statusCode === 200 && response.body) {
             var result = JSON.parse(response.body);
