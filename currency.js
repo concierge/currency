@@ -1,5 +1,20 @@
 var request = require('request');
 
+let supportedCurrencies = ['EUR',"AUD","BGN","BRL","CAD","CHF","CNY","CZK","DKK","GBP","HKD","HRK","HUF","IDR","ILS","INR","JPY","KRW","MXN","MYR","NOK","NZD","PHP","PLN","RON","RUB","SEK","SGD","THB","TRY","USD","ZAR"];
+
+let conversions = null;
+let number = '(-?[0-9](,|[0-9])+(.[0-9]+)?) ?';
+let currencies = `(${supportedCurrencies.join('|')})`;
+
+let regex = `${number} ?${currencies}( in ${currencies})?`;
+
+let re = new RegExp(regex, 'gi');
+
+exports.match = (event, commandPrefix) => {
+    let match = re.exec(event.body);
+    return match !== null;
+};
+
 exports.run = (api, event) => {
     var query = event.body.substr(10),
         parts = query.split(' ');
@@ -57,6 +72,7 @@ const getExchange = () => {
     return new Promise((accept, reject) => {
         request.get('http://api.fixer.io/latest', function(error, response, body) {
             if (response.statusCode === 200 && response.body) {
+                console.log(response.body);
                 var result = JSON.parse(response.body);
                 accept(result);
             }
