@@ -1,14 +1,13 @@
-var request = require('request');
+const request = require('request');
 
-let supportedCurrencies = ['EUR',"AUD","BGN","BRL","CAD","CHF","CNY","CZK","DKK","GBP","HKD","HRK","HUF","IDR","ILS","INR","JPY","KRW","MXN","MYR","NOK","NZD","PHP","PLN","RON","RUB","SEK","SGD","THB","TRY","USD","ZAR"];
+const supportedCurrencies = ['EUR',"AUD","BGN","BRL","CAD","CHF","CNY","CZK","DKK","GBP","HKD","HRK","HUF","IDR","ILS","INR","JPY","KRW","MXN","MYR","NOK","NZD","PHP","PLN","RON","RUB","SEK","SGD","THB","TRY","USD","ZAR"];
+
+const number = '(-?[0-9](,|[0-9])+(.[0-9]+)?) ?';
+const currencies = `(${supportedCurrencies.join('|')})`;
+const regex = `${number} ?${currencies}( in ${currencies})?`;
+const re = new RegExp(regex, 'gi');
 
 let conversions = null;
-let number = '(-?[0-9](,|[0-9])+(.[0-9]+)?) ?';
-let currencies = `(${supportedCurrencies.join('|')})`;
-
-let regex = `${number} ?${currencies}( in ${currencies})?`;
-
-let re = new RegExp(regex, 'gi');
 
 exports.match = (event, commandPrefix) => {
     let match = re.exec(event.body);
@@ -16,7 +15,7 @@ exports.match = (event, commandPrefix) => {
 };
 
 exports.run = (api, event) => {
-    var query = event.body.substr(10),
+    let query = event.body.substr(10),
         parts = query.split(' ');
 
     //If we don't have the right number of parts, give up
@@ -60,7 +59,7 @@ const convert = (f, to, amount, conversions) => {
         };
     }
 
-    var a = amount/conversions[f] * conversions[to];
+    let a = amount/conversions[f] * conversions[to];
     a = Math.round(a*100) / 100;
 
     return {
@@ -73,7 +72,7 @@ const getExchange = () => {
         request.get('http://api.fixer.io/latest', function(error, response, body) {
             if (response.statusCode === 200 && response.body) {
                 console.log(response.body);
-                var result = JSON.parse(response.body);
+                let result = JSON.parse(response.body);
                 accept(result);
             }
             else {
