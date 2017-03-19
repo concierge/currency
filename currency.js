@@ -1,13 +1,44 @@
 const request = require('request');
 
-const supportedCurrencies = ['EUR',"AUD","BGN","BRL","CAD","CHF","CNY","CZK","DKK","GBP","HKD","HRK","HUF","IDR","ILS","INR","JPY","KRW","MXN","MYR","NOK","NZD","PHP","PLN","RON","RUB","SEK","SGD","THB","TRY","USD","ZAR"];
+const supportedCurrencies = [
+    'EUR',
+    'AUD',
+    'BGN',
+    'BRL',
+    'CAD',
+    'CHF',
+    'CNY',
+    'CZK',
+    'DKK',
+    'GBP',
+    'HKD',
+    'HRK',
+    'HUF',
+    'IDR',
+    'ILS',
+    'INR',
+    'JPY',
+    'KRW',
+    'MXN',
+    'MYR',
+    'NOK',
+    'NZD',
+    'PHP',
+    'PLN',
+    'RON',
+    'RUB',
+    'SEK',
+    'SGD',
+    'THB',
+    'TRY',
+    'USD',
+    'ZAR'
+];
 
 const number = '(-?[0-9](,|[0-9])+(.[0-9]+)?) ?';
 const currencies = `(${supportedCurrencies.join('|')})`;
 const regex = `${number} ?${currencies}( in ${currencies})?`;
 const re = new RegExp(regex, 'gi');
-
-let conversions = null;
 
 exports.match = (event, commandPrefix) => {
     let match = re.exec(event.body);
@@ -26,7 +57,7 @@ exports.run = (api, event) => {
         amount = match[1],
         fromCurrency = match[4],
         toCurrency = match[6] || exports.config.defaultToCurrency;
-    
+
     re.lastIndex = 0;
 
     // If we don't have a to currency in the config or message, yell at the user
@@ -48,8 +79,8 @@ exports.run = (api, event) => {
 
             //If we couldn't convert, give up
             if (result.error) {
-            api.sendMessage(result.error, event.thread_id);
-            return;
+                api.sendMessage(result.error, event.thread_id);
+                return;
             }
 
             api.sendMessage(`${amount} ${fromCurrency} is about ${result.result} ${toCurrency}`, event.thread_id);
@@ -75,8 +106,8 @@ const convert = (f, to, amount, conversions) => {
         };
     }
 
-    let a = amount/conversions[f] * conversions[to];
-    a = Math.round(a*100) / 100;
+    let a = amount / conversions[f] * conversions[to];
+    a = Math.round(a * 100) / 100;
 
     return {
         result: a
@@ -85,14 +116,13 @@ const convert = (f, to, amount, conversions) => {
 
 const getExchange = () => {
     return new Promise((accept, reject) => {
-        request.get('http://api.fixer.io/latest', function(error, response, body) {
+        request.get('http://api.fixer.io/latest', function (error, response, body) {
             if (response.statusCode === 200 && response.body) {
-                let result = JSON.parse(response.body);
+                const result = JSON.parse(response.body);
                 // Add an entry for the Euro.
                 result.rates.EUR = 1;
                 accept(result);
-            }
-            else {
+            } else {
                 reject("Couldn't talk to fixer.io for the exchange rate...");
             }
         });
