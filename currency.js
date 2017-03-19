@@ -1,37 +1,99 @@
-var request = require('request');
+const request = require('request');
 
-exports.run = function(api, event) {
-    var query = event.body.substr(10),
-        parts = query.split(' ');
+const supportedCurrencies = [
+    'EUR',
+    'AUD',
+    'BGN',
+    'BRL',
+    'CAD',
+    'CHF',
+    'CNY',
+    'CZK',
+    'DKK',
+    'GBP',
+    'HKD',
+    'HRK',
+    'HUF',
+    'IDR',
+    'ILS',
+    'INR',
+    'JPY',
+    'KRW',
+    'MXN',
+    'MYR',
+    'NOK',
+    'NZD',
+    'PHP',
+    'PLN',
+    'RON',
+    'RUB',
+    'SEK',
+    'SGD',
+    'THB',
+    'TRY',
+    'USD',
+    'ZAR'
+];
 
-    //If we don't have the right number of parts, give up
-    if (parts.length !== 4) {
+const number = '(-?[0-9](,|[0-9])+(.[0-9]+)?) ?';
+const currencies = `(${supportedCurrencies.join('|')})`;
+const regex = `${number} ?${currencies}( in ${currencies})?`;
+const re = new RegExp(regex, 'gi');
+
+exports.match = (event, commandPrefix) => {
+    let match = re.exec(event.body);
+    re.lastIndex = 0;
+
+    return match !== null;
+};
+
+exports.run = (api, event) => {
+    // If no default currency has been specified, use NZD, 'cause it's cool.
+    if (!exports.config.defaultToCurrency) {
+        exports.config.defaultToCurrency = "NZD";
+    }
+
+    let match = re.exec(event.body),
+        amount = match[1],
+        fromCurrency = match[4],
+        toCurrency = match[6] || exports.config.defaultToCurrency;
+
+    re.lastIndex = 0;
+
+    // If we don't have a to currency in the config or message, yell at the user
+    // (it's always their fault).
+    if (!toCurrency) {
+        api.sendMessage("You don't seem to have a default to currency specified (either set one in the config.defaultToCurrency or specify it in the message)", event.thread_id);
+        return;
+    }
+
+    // This should never happen but I'm paranoid.
+    if (!amount || !fromCurrency) {
         api.sendMessage("That looks wrong. You should try harder.", event.thread_id);
         return;
     }
 
-    get_exchange(function (result) {
-        //If we couldn't get the latest data, give up.
-        if (result.error) {
-          api.sendMessage(result.error, event.thread_id);
-          return;
-        }
+    getExchange()
+        .then(result => {
+            result = convert(fromCurrency, toCurrency, parseFloat(amount), result.rates);
 
-        //Add an entry for the Euro
-        result.rates.EUR = 1;
-        result = convert(parts[1], parts[3], parseInt(parts[0]), result.rates);
+            //If we couldn't convert, give up
+            if (result.error) {
+                api.sendMessage(result.error, event.thread_id);
+                return;
+            }
 
-        //If we couldn't convert, give up
-        if (result.error) {
-          api.sendMessage(result.error, event.thread_id);
-          return;
-        }
-
-        api.sendMessage("It's about " + result.result + ' ' + parts[3], event.thread_id);
-    });
+            api.sendMessage(`${amount} ${fromCurrency} is about ${result.result} ${toCurrency}`, event.thread_id);
+        }, error => {
+            //If we couldn't get the latest data, give up.
+            api.sendMessage(error, event.thread_id);
+        });
 };
 
-function convert(f, to, amount, conversions) {
+const convert = (f, to, amount, conversions) => {
+    f = f.toUpperCase();
+    to = to.toUpperCase();
+
     if (!conversions[f]) {
         return {
             error: "Unsupported currency '" + f + "'"
@@ -44,22 +106,25 @@ function convert(f, to, amount, conversions) {
         };
     }
 
-    var a = amount/conversions[f] * conversions[to];
-    a = Math.round(a*100) / 100;
+    let a = amount / conversions[f] * conversions[to];
+    a = Math.round(a * 100) / 100;
 
     return {
         result: a
     };
-}
+};
 
-function get_exchange(callback) {
-    request.get('http://api.fixer.io/latest', function(error, response, body) {
-        if (response.statusCode === 200 && response.body) {
-            var result = JSON.parse(response.body);
-            callback(result);
-        }
-        else {
-            callback({error:"Couldn't talk to fixer.io for the exchange rate.."});
-        }
-     });
+const getExchange = () => {
+    return new Promise((accept, reject) => {
+        request.get('http://api.fixer.io/latest', function (error, response, body) {
+            if (response.statusCode === 200 && response.body) {
+                const result = JSON.parse(response.body);
+                // Add an entry for the Euro.
+                result.rates.EUR = 1;
+                accept(result);
+            } else {
+                reject("Couldn't talk to fixer.io for the exchange rate...");
+            }
+        });
+    });
 }
