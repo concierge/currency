@@ -35,7 +35,7 @@ const supportedCurrencies = [
     'ZAR'
 ];
 
-const number = '(-?[0-9](,|[0-9])+(.[0-9]+)?) ?';
+const number = '(-?[0-9](,|[0-9])*(.[0-9]+)?) ?';
 const currencies = `(${supportedCurrencies.join('|')})`;
 const regex = `${number} ?${currencies}( in ${currencies})?`;
 const re = new RegExp(regex, 'gi');
