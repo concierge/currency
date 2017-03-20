@@ -49,8 +49,9 @@ const re = (() => {
 })();
 
 const findCurrency = (cur) => {
+    cur = cur.toUpperCase();
     // If cur is already a currency, return it.
-    if (currencyInfo.names[cur.toUpperCase()]) return cur;
+    if (currencyInfo.names[cur]) return cur;
 
     // Otherwise, we need to find an alias:
     for (var alias in currencyInfo.aliases) {
