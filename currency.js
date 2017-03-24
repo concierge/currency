@@ -56,17 +56,8 @@ const findCurrency = (cur) => {
     // If cur is already a currency, return it.
     if (currencyInfo.names[cur]) return cur;
 
-    // Otherwise, we need to find an alias:
-    for (var alias in currencyInfo.aliases) {
-        let regex = currencyInfo.aliasRegexes[alias];
-        regex.lastIndex = 0;
-
-        if (cur.match(regex)) {
-            return currencyInfo.aliases[alias];
-        }
-    }
-
-    return null;
+    // Find the currency that corresponds to our alias.
+    return currencyInfo.aliases[Object.keys(currencyInfo.aliasRegexes).find(a => cur.match(currencyInfo.aliasRegexes[a]))] || null;
 };
 
 exports.match = (event, commandPrefix) => {
