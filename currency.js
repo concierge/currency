@@ -40,7 +40,10 @@ const re = (() => {
     const number = '(-?[0-9](,|[0-9])*(.[0-9]+)?) ?';
 
     const aliases = [];
+    currencyInfo.aliasRegexes = {}
     for (let key in currencyInfo.aliases) {
+        // Save the RegExp so we only make it once.
+        currencyInfo.aliasRegexes[key] = new RegExp(key, 'i');
         aliases.push(key);
     }
     const currencies = `(${supportedCurrencies.join('|')}|${aliases.join('|')})`;
@@ -55,7 +58,10 @@ const findCurrency = (cur) => {
 
     // Otherwise, we need to find an alias:
     for (var alias in currencyInfo.aliases) {
-        if (cur.match(new RegExp(alias, 'i'))) {
+        let regex = currencyInfo.aliasRegexes[alias];
+        regex.lastIndex = 0;
+
+        if (cur.match(regex)) {
             return currencyInfo.aliases[alias];
         }
     }
