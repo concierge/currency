@@ -1,39 +1,5 @@
 const request = require('request');
-
-const currencyNames = {
-    'EUR': 'Euro',
-    'AUD': 'Australian Dollar',
-    'BGN': 'Bulgarian Lev',
-    'BRL': 'Brazilian Real',
-    'CAD': 'Canadian Dollar',
-    'CHF': 'Swiss Franc',
-    'CNY': 'Chinese Yuan',
-    'CZK': 'Czech Republic Koruna',
-    'DKK': 'Danish Krone',
-    'GBP': 'British Pound',
-    'HKD': 'Hong Kong Dollar',
-    'HRK': 'Croatian Kuna',
-    'HUF': 'Hungarian Forint',
-    'IDR': 'Indonesian Rupiah',
-    'ILS': 'Israeli New Shekel ',
-    'INR': 'Indian Rupee',
-    'JPY': 'Japanese Yen',
-    'KRW': 'South Korean Won',
-    'MXN': 'Mexican Peso',
-    'MYR': 'Malaysian Ringgit',
-    'NOK': 'Norwegian Krone',
-    'NZD': 'New Zealand Dollar',
-    'PHP': 'Philippine Peso',
-    'PLN': 'Polish Zloty',
-    'RON': 'Romanian Leu',
-    'RUB': 'Russian Ruble',
-    'SEK': 'Swedish Krona',
-    'SGD': 'Singapore Dollar',
-    'THB': 'Thai Baht',
-    'TRY': 'Turkish Lira',
-    'USD': 'United States Dollar',
-    'ZAR': 'South African Rand'
-};
+const currencyInfo = require('./currencyInfo.json');
 
 const supportedCurrencies = [
     'EUR',
@@ -70,10 +36,29 @@ const supportedCurrencies = [
     'ZAR'
 ];
 
-const number = '(-?[0-9](,|[0-9])*(.[0-9]+)?) ?';
-const currencies = `(${supportedCurrencies.join('|')})`;
-const regex = `${number} ?${currencies}( in ${currencies})?`;
-const re = new RegExp(regex, 'gi');
+const re = (() => {
+    const number = '(-?[0-9](,|[0-9])*(.[0-9]+)?) ?';
+
+    const aliases = [];
+    currencyInfo.aliasRegexes = {}
+    for (let key in currencyInfo.aliases) {
+        // Save the RegExp so we only make it once.
+        currencyInfo.aliasRegexes[key] = new RegExp(key, 'i');
+        aliases.push(key);
+    }
+    const currencies = `(${supportedCurrencies.join('|')}|${aliases.join('|')})`;
+    const regex = `${number} ?${currencies}( in ${currencies})?`;
+    return new RegExp(regex, 'gi');
+})();
+
+const findCurrency = (cur) => {
+    cur = cur.toUpperCase();
+    // If cur is already a currency, return it.
+    if (currencyInfo.names[cur]) return cur;
+
+    // Find the currency that corresponds to our alias.
+    return currencyInfo.aliases[Object.keys(currencyInfo.aliasRegexes).find(a => cur.match(currencyInfo.aliasRegexes[a]))] || null;
+};
 
 exports.match = (event, commandPrefix) => {
     let match = re.exec(event.body);
@@ -90,8 +75,8 @@ exports.run = (api, event) => {
 
     let match = re.exec(event.body),
         amount = match[1],
-        fromCurrency = match[4],
-        toCurrency = match[6] || exports.config.defaultToCurrency;
+        fromCurrency = findCurrency(match[4]),
+        toCurrency = findCurrency(match[29]) || exports.config.defaultToCurrency;
 
     re.lastIndex = 0;
 
