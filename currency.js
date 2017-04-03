@@ -52,6 +52,8 @@ const re = (() => {
 })();
 
 const findCurrency = (cur) => {
+    if (!cur) return null;
+    
     cur = cur.toUpperCase();
     // If cur is already a currency, return it.
     if (currencyInfo.names[cur]) return cur;
